@@ -15,9 +15,18 @@ public:
 		return glm::vec3(0.0f);
 	}
 
-	glm::vec3 Position;
-	int MaterialIndex;
+	glm::vec3& GetPosition()
+	{s
+		return Position;
+	}
 
+	int& GetMaterialIndex()
+	{
+		return MaterialIndex;
+	}
+
+	glm::vec3 Position = glm::vec3(0.0f);
+	int MaterialIndex = 0;
 	virtual ~RTObject() { }
 };
 
@@ -50,9 +59,18 @@ public:
 		return glm::normalize(position);
 	}
 
+	glm::vec3& GetPosition()
+	{
+		return Position;
+	}
+
+	int& GetMaterialIndex()
+	{
+		return MaterialIndex;
+	}
+
 	glm::vec3 Position = glm::vec3(0.0f);
 	int MaterialIndex = 0;
-
 	float Radius = 1.0f;
 };
 
@@ -89,8 +107,17 @@ public:
 		return glm::normalize(n);
 	}
 
+	glm::vec3& GetPosition() 
+	{
+		return Position;
+	}
+
+	int& GetMaterialIndex()
+	{
+		return MaterialIndex;
+	}
+
 	glm::vec3 Position = glm::vec3(0.0f);
 	int MaterialIndex = 0;
-
 	glm::vec3 Dimensions = glm::vec3(1.0f);
 };

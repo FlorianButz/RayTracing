@@ -263,11 +263,17 @@ Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, flo
 	payload.ExitDistance = exitDistane;
 	payload.ObjectIndex = objectIndex;
 
-	glm::vec3 origin = ray.Origin - (m_ActiveScene->SceneObjects[objectIndex]->Position);
+	RTObject* closestObj = m_ActiveScene->SceneObjects[objectIndex];
+
+	glm::vec3 origin = ray.Origin - closestObj->Position;
 	payload.WorldPosition = origin + ray.Direction * hitDistance;
 	payload.WorldNormal = glm::normalize(payload.WorldPosition);
 
-	payload.WorldPosition += m_ActiveScene->SceneObjects[objectIndex]->Position;
+	payload.WorldPosition += closestObj->GetPosition();
+
+	// \/ Remove
+
+	payload.WorldNormal = m_ActiveScene->SceneObjects[objectIndex]->Position;
 
 	return payload;
 }

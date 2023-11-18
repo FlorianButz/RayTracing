@@ -40,7 +40,7 @@ public:
 			floor->MaterialIndex = 0;
 			m_Scene.SceneObjects.push_back(floor);
 
-			m_Scene.skyColor = glm::vec3(0.75f, 0.075f, 0.75f);
+			m_Scene.skyColor = glm::vec3(0.75f, 0.75f, 0.75f);
 	}
 
 	virtual void OnUpdate(float ts) override
@@ -53,6 +53,12 @@ public:
 
 	virtual void OnUIRender() override
 	{
+		ImGui::Begin("Debug");
+		{
+			ImGui::Text("World Pos: %d", m_Scene.SceneObjects[0]->Position.x);
+		}
+		ImGui::End();
+
 		ImGui::Begin("Settings");
 		{
 			ImGui::Text("Rendertime: %.3fms Samples Rendered: %d", m_LastRenderTime, m_Renderer.GetFrameIndex()-1);
@@ -137,11 +143,9 @@ public:
 		}
 		ImGui::End();
 
-		ImGui::Begin("Spheres");
+		ImGui::Begin("Objects");
 		{
 			// Object list
-
-			// SPHERES
 
 			for (size_t i = 0; i < m_Scene.SceneObjects.size(); i++)
 			{
@@ -151,21 +155,25 @@ public:
 				
 				if (Cube* cube = dynamic_cast<Cube*>(rtobject))
 				{
-					ImGui::Text("[Object %d] General Settings: ", i);
+					ImGui::Text("[Cube %d] General Settings: ", i);
 					ImGui::DragFloat3("Position", glm::value_ptr(cube->Position), 0.01f);
 					ImGui::DragInt("Material Index", &cube->MaterialIndex, 1.0f, 0.0, (int)m_Scene.Materials.size() - 1);
 
-					ImGui::Text("[Object %d] Object specific Settings: ", i);
+					ImGui::Text("[Cube %d] Object specific Settings: ", i);
 					ImGui::DragFloat3("Dimensions", glm::value_ptr(cube->Dimensions), 0.01f);
+
+					if (ImGui::Button("X")) m_Scene.SceneObjects.erase(m_Scene.SceneObjects.begin() + i);
 				}
 				else if (Sphere* sphere = dynamic_cast<Sphere*>(rtobject))
 				{
-					ImGui::Text("[Object %d] General Settings: ", i);
+					ImGui::Text("[Sphere %d] General Settings: ", i);
 					ImGui::DragFloat3("Position", glm::value_ptr(sphere->Position), 0.01f);
 					ImGui::DragInt("Material Index", &sphere->MaterialIndex, 1.0f, 0.0, (int)m_Scene.Materials.size() - 1);
 
-					ImGui::Text("[Object %d] Object specific Settings: ", i);
+					ImGui::Text("[Sphere %d] Object specific Settings: ", i);
 					ImGui::DragFloat("Radius", &sphere->Radius, 0.01f);
+
+					if (ImGui::Button("X")) m_Scene.SceneObjects.erase(m_Scene.SceneObjects.begin() + i);
 				}
 
 				ImGui::Separator();
@@ -175,13 +183,22 @@ public:
 
 			// Add new object
 
-			if (ImGui::Button("Add new Object"))
+			if (ImGui::Button("Add new Sphere"))
 			{
-				Sphere sphere;
-				sphere.Position = { 0.0f, 0.0f, 0.0f };
-				sphere.Radius = 1.0f;
-				sphere.MaterialIndex = 0;
-				m_Scene.SceneObjects.push_back(&sphere);
+				Sphere* sphere = new Sphere();
+				sphere->Position = { 0.0f, 0.0f, 0.0f };
+				sphere->Radius = 1.0f;
+				sphere->MaterialIndex = 0;
+				m_Scene.SceneObjects.push_back(sphere);
+			}
+
+			if (ImGui::Button("Add new Cube"))
+			{
+				Cube* cube = new Cube();
+				cube->Position = { 0.0f, 0.0f, 0.0f };
+				cube->Dimensions = glm::vec3(1.0f);
+				cube->MaterialIndex = 0;
+				m_Scene.SceneObjects.push_back(cube);
 			}
 		}
 		ImGui::End();
