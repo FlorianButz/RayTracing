@@ -15,6 +15,9 @@ class Renderer
 public:
 	struct Settings 
 	{
+		bool DisplayNormals = false;
+		bool OnlyIndirect = false;
+		
 		bool Accumulate = true;
 		bool SlowRandom = false;
 
@@ -47,8 +50,8 @@ private:
 	glm::vec4 PerPixel(uint32_t x, uint32_t y); // RayGen
 	
 	HitPayload TraceRay(const Ray& ray);
-	HitPayload ClosestHit(const Ray& ray, float hitDistance, int objectIndex, float exitDistance);
 	HitPayload Miss(const Ray& ray);
+	Renderer::HitPayload ClosestHit(const Ray& ray, float hitDistance, float exitDistance, int objectIndex);
 
 private:
 	std::shared_ptr<Walnut::Image> m_FinalImage;

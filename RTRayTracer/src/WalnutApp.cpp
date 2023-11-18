@@ -20,41 +20,27 @@ public:
 	ExampleLayer() :
 		m_Camera(45.0f, 0.1f, 100.0f)
 	{
-		{
 			Material& defaultMaterial = m_Scene.Materials.emplace_back();
-			defaultMaterial.Albedo = { 1.0f, 1.0f, 1.0f };
-			defaultMaterial.Roughness = 1.0f;
-		}
+			defaultMaterial.Albedo = { 0.5f, 0.5f, 0.5f };
+			defaultMaterial.Roughness = 0.5f;
 
-		{
-			Material& defaultMaterial = m_Scene.Materials.emplace_back();
-			defaultMaterial.Albedo = { 0.7f, 0.7f, 0.7f };
-			defaultMaterial.Roughness = 0.1f;
-		}
+			Material& defaultMaterial2 = m_Scene.Materials.emplace_back();
+			defaultMaterial2.Albedo = { 0.7f, 0.7f, 0.7f };
+			defaultMaterial2.Roughness = 1.0f;
 
-		{
-			Sphere sphere;
-			sphere.Position = { -1.1f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
-			sphere.MaterialIndex = 1;
-			m_Scene.Spheres.push_back(sphere);
-		}
+			Sphere* sphere = new Sphere();
+			sphere->Position = { 0.0f, 2.0f, 0.0f };
+			sphere->Radius = 1.0f;
+			sphere->MaterialIndex = 1;
+			m_Scene.SceneObjects.push_back(sphere);
 
-		{
-			Sphere sphere;
-			sphere.Position = { 1.1f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
-			sphere.MaterialIndex = 1;
-			m_Scene.Spheres.push_back(sphere);
-		}
+			Cube* floor = new Cube();
+			floor->Position = { 0.0f, -5.0f, 0.0f };
+			floor->Dimensions = glm::vec3(1000.0f, 0.01f, 1000.0f);
+			floor->MaterialIndex = 0;
+			m_Scene.SceneObjects.push_back(floor);
 
-		{
-			Sphere sphere;
-			sphere.Position = { 0.0f, -101.0f, 0.0f };
-			sphere.Radius = 100.0f;
-			sphere.MaterialIndex = 0;
-			m_Scene.Spheres.push_back(sphere);
-		}
+			m_Scene.skyColor = glm::vec3(0.75f, 0.075f, 0.75f);
 	}
 
 	virtual void OnUpdate(float ts) override
@@ -71,7 +57,6 @@ public:
 		{
 			ImGui::Text("Rendertime: %.3fms Samples Rendered: %d", m_LastRenderTime, m_Renderer.GetFrameIndex()-1);
 
-
 			ImGui::Text("Render Settings");
 
 			ImGui::Checkbox("Realtime", &m_IsRealTime);
@@ -79,11 +64,16 @@ public:
 			ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().Accumulate);
 			ImGui::Checkbox("Slow Random", &m_Renderer.GetSettings().SlowRandom);
 
-			ImGui::DragInt("Light Bounces", &m_Renderer.GetSettings().LightBounces, 0, 10000);
+			ImGui::SliderInt("Light Bounces", &m_Renderer.GetSettings().LightBounces, 0, 250);
 			ImGui::DragFloat("Anti Alias Radius", &m_Renderer.GetSettings().AntiAliasingAmount, 0.01f, 0, 50);
 			
 			if(!m_IsRealTime)
 				ImGui::DragInt("Samples", &m_Samples);
+
+
+			ImGui::Text("Debug Settings");
+			ImGui::Checkbox("Only Indirect Lighting", &m_Renderer.GetSettings().OnlyIndirect);
+			ImGui::Checkbox("Display Surface Normals", &m_Renderer.GetSettings().DisplayNormals);
 
 			if (!m_IsRealTime) {
 				if (ImGui::Button("Render")) {
@@ -106,39 +96,11 @@ public:
 		}
 		ImGui::End();
 
-		ImGui::Begin("Scene");
+		ImGui::Begin("Materials");
 		{
 			ImGui::Text("Scene Settings");
 			ImGui::ColorEdit3("Sky Color", glm::value_ptr(m_Scene.skyColor));
 			ImGui::Separator();
-
-			// Object list
-
-			for (size_t i = 0; i < m_Scene.Spheres.size(); i++)
-			{
-				ImGui::PushID(i);
-
-				Sphere& sphere = m_Scene.Spheres[i];
-				ImGui::Text("[Sphere %d] Object Settings: ", i);
-				ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.01f);
-				ImGui::DragFloat("Radius", &sphere.Radius, 0.01f);
-				ImGui::DragInt("Material Index", &sphere.MaterialIndex, 1.0f, 0.0, (int)m_Scene.Materials.size() - 1);
-
-				ImGui::Separator();
-
-				ImGui::PopID();
-			}
-
-			// Add new object
-
-			if (ImGui::Button("Add new Object"))
-			{
-				Sphere sphere;
-				sphere.Position = { 0.0f, 0.0f, 0.0f };
-				sphere.Radius = 1.0f;
-				sphere.MaterialIndex = 0;
-				m_Scene.Spheres.push_back(sphere);
-			}
 
 			// Material list
 
@@ -171,6 +133,55 @@ public:
 				Material& newMaterial = m_Scene.Materials.emplace_back();
 				newMaterial.Albedo = { 1.0f, 1.0f, 1.0f };
 				newMaterial.Roughness = 1.0f;
+			}
+		}
+		ImGui::End();
+
+		ImGui::Begin("Spheres");
+		{
+			// Object list
+
+			// SPHERES
+
+			for (size_t i = 0; i < m_Scene.SceneObjects.size(); i++)
+			{
+				ImGui::PushID(i);
+
+				RTObject* rtobject = m_Scene.SceneObjects[i];
+				
+				if (Cube* cube = dynamic_cast<Cube*>(rtobject))
+				{
+					ImGui::Text("[Object %d] General Settings: ", i);
+					ImGui::DragFloat3("Position", glm::value_ptr(cube->Position), 0.01f);
+					ImGui::DragInt("Material Index", &cube->MaterialIndex, 1.0f, 0.0, (int)m_Scene.Materials.size() - 1);
+
+					ImGui::Text("[Object %d] Object specific Settings: ", i);
+					ImGui::DragFloat3("Dimensions", glm::value_ptr(cube->Dimensions), 0.01f);
+				}
+				else if (Sphere* sphere = dynamic_cast<Sphere*>(rtobject))
+				{
+					ImGui::Text("[Object %d] General Settings: ", i);
+					ImGui::DragFloat3("Position", glm::value_ptr(sphere->Position), 0.01f);
+					ImGui::DragInt("Material Index", &sphere->MaterialIndex, 1.0f, 0.0, (int)m_Scene.Materials.size() - 1);
+
+					ImGui::Text("[Object %d] Object specific Settings: ", i);
+					ImGui::DragFloat("Radius", &sphere->Radius, 0.01f);
+				}
+
+				ImGui::Separator();
+
+				ImGui::PopID();
+			}
+
+			// Add new object
+
+			if (ImGui::Button("Add new Object"))
+			{
+				Sphere sphere;
+				sphere.Position = { 0.0f, 0.0f, 0.0f };
+				sphere.Radius = 1.0f;
+				sphere.MaterialIndex = 0;
+				m_Scene.SceneObjects.push_back(&sphere);
 			}
 		}
 		ImGui::End();

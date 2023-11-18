@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include "Object.h"
 
 struct Material
 {
@@ -18,18 +19,10 @@ struct Material
 	float IOR = 1.0f;
 };
 
-struct Sphere
-{
-	glm::vec3 Position{ 0.0f };
-	float Radius = 0.5f;
-
-	int MaterialIndex = 0;
-};
-
 struct Scene
 {
-	std::vector<Sphere> Spheres;
+	std::vector<RTObject*> SceneObjects;
 	std::vector<Material> Materials;
 
-	glm::vec3 skyColor = glm::vec3(0.75f, 0.075f, 0.75f);
+	glm::vec3 skyColor = glm::vec3(0.0f);
 };
