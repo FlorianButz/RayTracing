@@ -15,12 +15,12 @@ public:
 		return glm::vec3(0.0f);
 	}
 
-	glm::vec3& GetPosition()
-	{s
+	virtual glm::vec3& GetPosition()
+	{
 		return Position;
 	}
 
-	int& GetMaterialIndex()
+	virtual int& GetMaterialIndex()
 	{
 		return MaterialIndex;
 	}
@@ -59,12 +59,12 @@ public:
 		return glm::normalize(position);
 	}
 
-	glm::vec3& GetPosition()
+	glm::vec3& GetPosition() override
 	{
 		return Position;
 	}
 
-	int& GetMaterialIndex()
+	int& GetMaterialIndex() override
 	{
 		return MaterialIndex;
 	}
@@ -100,19 +100,34 @@ public:
 
 	glm::vec3 Normal(glm::vec3 position) override
 	{
-		glm::vec3 vMax = glm::vec3(Dimensions.x, Dimensions.y, Dimensions.z);
-		glm::vec3 vMin = glm::vec3(-Dimensions.x, -Dimensions.y, -Dimensions.z);
-		glm::vec3 center = (vMax + vMin) * 0.5f;
-		glm::vec3 n = glm::vec3(position.x - center.x, position.y - center.y, position.z - center.z);
-		return glm::normalize(n);
+		glm::vec3 invScale = 1.0f / Dimensions;
+
+		position *= invScale; // Apply inverse scaling to the position
+
+		glm::vec3 absPos = glm::abs(position);
+		float maxComponent = glm::max(glm::max(absPos.x, absPos.y), absPos.z);
+
+		glm::vec3 boxNormal;
+
+		if (maxComponent == absPos.x) {
+			boxNormal = glm::vec3(position.x < 0.0f ? -1.0f : 1.0f, 0.0f, 0.0f);
+		}
+		else if (maxComponent == absPos.y) {
+			boxNormal = glm::vec3(0.0f, position.y < 0.0f ? -1.0f : 1.0f, 0.0f);
+		}
+		else {
+			boxNormal = glm::vec3(0.0f, 0.0f, position.z < 0.0f ? -1.0f : 1.0f);
+		}
+
+		return glm::normalize(boxNormal);
 	}
 
-	glm::vec3& GetPosition() 
+	glm::vec3& GetPosition() override
 	{
 		return Position;
 	}
 
-	int& GetMaterialIndex()
+	int& GetMaterialIndex() override
 	{
 		return MaterialIndex;
 	}

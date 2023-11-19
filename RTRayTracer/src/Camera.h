@@ -23,7 +23,8 @@ public:
 
 	float GetRotationSpeed();
 	
-
+	glm::vec3 upDirection;
+	glm::vec3 rightDirection;
 private:
 	void RecalculateProjection();
 	void RecalculateView();
@@ -39,7 +40,9 @@ private:
 	float m_FarClip = 100.0f;
 
 	glm::vec3 m_Position{0.0f, 0.0f, 0.0f};
-	glm::vec3 m_ForwardDirection{0.0f, 0.0f, 0.0f};
+	glm::vec3 m_ForwardDirection{ 0.0f, 0.0f, 0.0f };
+	glm::vec3 m_UpDirection{ 0.0f, 0.0f, 0.0f };
+	glm::vec3 m_RightDirection{0.0f, 0.0f, 0.0f};
 
 	// Cached ray directions
 	std::vector<glm::vec3> m_RayDirections;

@@ -31,8 +31,8 @@ bool Camera::OnUpdate(float ts)
 
 	bool moved = false;
 
-	constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
-	glm::vec3 rightDirection = glm::cross(m_ForwardDirection, upDirection);
+	upDirection = glm::vec3(0.0f, 1.0f, 0.0f);
+	rightDirection = glm::cross(m_ForwardDirection, upDirection);
 
 	float speed = 5.0f;
 

@@ -4,6 +4,9 @@
 #include "Object.h"
 
 #include <execution>
+#include <cmath>
+
+# define M_PI           3.14159265358979323846
 
 namespace Utils {
 	static uint32_t ConvertToRGBA(const glm::vec4& color)
@@ -27,7 +30,8 @@ namespace Utils {
 	static float RandomFloat(uint32_t& seed)
 	{
 		seed = PCG_Hash(seed);
-		return (float)seed / (float)std::numeric_limits<uint32_t>::max();
+		float toReturn = (float)seed / (float)std::numeric_limits<uint32_t>::max();
+		return toReturn;
 	}
 
 	static glm::vec3 InUnitSphere(uint32_t& seed)
@@ -37,18 +41,45 @@ namespace Utils {
 										RandomFloat(seed) * 2.0f - 1.0f));
 	}
 
-	static glm::vec3 refract(glm::vec3 rayDirection, glm::vec3 normal, float ior)
+	static glm::vec3 Refract(glm::vec3 rayDirection, glm::vec3 normal, float ior)
 	{
 		ior = 2.0f - ior;
 		float cosi = glm::dot(normal, rayDirection);
 		glm::vec3 o = (rayDirection * ior - normal * (-cosi + ior * cosi));
 		return o;
 	}
+
+	static float Lerp(float a, float b, float f)
+	{
+		return a + f * (b - a);
+	}
+
+	static glm::vec3 Lerp3(const glm::vec3& a, const glm::vec3& b, float t) {
+		t = glm::clamp(t, 0.0f, 1.0f); // Ensure t is clamped between 0 and 1
+		return a + t * (b - a);
+	}
+
+	static glm::vec2 RandomPointInCircle(uint32_t seed)
+	{
+		float angle = RandomFloat(seed) * 2 * M_PI;
+		glm::vec2 pointOnCircle = glm::vec2(cos(angle), sin(angle));
+		return pointOnCircle * sqrt(RandomFloat(seed));
+	}
 }
 
 int Renderer::GetFrameIndex() 
 {
 	return m_FrameIndex;
+}
+
+uint32_t Renderer::GetPixelAt(int x, int y)
+{
+	return m_ImageData[x + y * m_FinalImage->GetWidth()];
+}
+
+bool Renderer::DoesImageExist()
+{
+	return m_HasImageData;
 }
 
 void Renderer::OnResize(uint32_t width, uint32_t height)
@@ -78,6 +109,8 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 		m_ImageHorizonntalIterator[i] = i;
 	for (uint32_t i = 0; i < height; i++)
 		m_ImageVerticalIterator[i] = i;
+
+	m_HasImageData = false;
 }
 
 void Renderer::ResetImage(uint32_t width, uint32_t height)
@@ -96,10 +129,14 @@ void Renderer::ResetImage(uint32_t width, uint32_t height)
 		m_ImageHorizonntalIterator[i] = i;
 	for (uint32_t i = 0; i < height; i++)
 		m_ImageVerticalIterator[i] = i;
+
+	m_HasImageData = false;
 }
 
 void Renderer::Render(const Scene& scene, const Camera& camera)
 {
+	m_HasImageData = true;
+
 	m_ActiveScene = &scene;
 	m_ActiveCamera = &camera;
 
@@ -108,13 +145,30 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 	if (m_FrameIndex == 1)
 		memset(m_AccumulationData, 0, m_FinalImage->GetWidth() * m_FinalImage->GetHeight() * sizeof(glm::vec4));
 
-
 	std::for_each(std::execution::par, m_ImageVerticalIterator.begin(), m_ImageVerticalIterator.end(),
 		[this](uint32_t y)
 		{
 			for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
 			{
-				glm::vec4 color = PerPixel(x, y);
+				glm::vec4 color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+				for (int pixelRay = 0; pixelRay < m_Settings.RaysPerPixel; pixelRay++)
+				{
+					float imgWidth = m_FinalImage->GetWidth();
+					float imgHeight = m_FinalImage->GetHeight();
+
+					uint32_t seed = x + y * m_FinalImage->GetWidth();
+					seed *= m_FrameIndex * (pixelRay * pixelRay + 293123);
+
+					Ray ray;
+					ray.Origin = m_ActiveCamera->GetPosition();
+					ray.Direction = m_ActiveCamera->GetRayDirections()[x + y * m_FinalImage->GetWidth()] + (Utils::InUnitSphere(seed) * m_Settings.AntiAliasingAmount);
+
+					//color += PerPixel(ray, seed, x, y);
+					color += PerPixel(ray, seed, x, y);
+				}
+				color /= m_Settings.RaysPerPixel;
+				color.a = 1.0f;
+
 				m_AccumulationData[x + y * m_FinalImage->GetWidth()] = m_AccumulationData[x + y * m_FinalImage->GetWidth()] + color;
 
 				glm::vec4 accumulatedColor = m_AccumulationData[x + y * m_FinalImage->GetWidth()];
@@ -135,72 +189,77 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 		m_FrameIndex = 1;
 }
 
-glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y)
+glm::vec4 Renderer::PerPixel(Ray ray, uint32_t seed, uint32_t x, uint32_t y)
 {
-	uint32_t seed = x + y * m_FinalImage->GetWidth();
-	seed *= m_FrameIndex;
+	glm::vec3 incomingLight = glm::vec3(0.0f);
+	glm::vec3 rayColor = glm::vec3(1.0f);
+	
+	for (int i = 0; i <= m_Settings.LightBounces; i++)
+	{
+		Renderer::HitInfo hitInfo = TraceRay(ray);
 
-	Ray ray;
-	ray.Origin = m_ActiveCamera->GetPosition();
-	ray.Direction = m_ActiveCamera->GetRayDirections()[x + y * m_FinalImage->GetWidth()];
-	ray.Direction = ray.Direction + (Utils::InUnitSphere(seed) * m_Settings.AntiAliasingAmount);
-
-	glm::vec3 light(0.0f);
-	glm::vec3 contribution(1.0f);
-
-	int bounces = m_Settings.LightBounces;
-	for (int i = 0; i < bounces; i++) {
-
-		seed += i;
-		
-		Renderer::HitPayload payload = TraceRay(ray);	
-
-		if (payload.HitDistance < 0.0f && m_Settings.DisplayNormals)
-			return glm::vec4(0.0f);
-		else if (payload.HitDistance < 0.0f)
+		if (hitInfo.HitDistance > 0.0f)
 		{
-			light += m_ActiveScene->skyColor * contribution;
+			if (m_Settings.DisplayNormals)
+				return glm::vec4(hitInfo.HitNormal, 1.0f);
+
+			const Material& material = m_ActiveScene->Materials[m_ActiveScene->SceneObjects[hitInfo.ObjectIndex]->GetMaterialIndex()];
+
+			glm::vec3 materialColor = material.Color;
+
+			if (material.Checker) {
+				float u = 0.5 + glm::atan(hitInfo.HitPosition.z, hitInfo.HitPosition.x) / (2 * M_PI);
+				float v = 0.5 - glm::asin(hitInfo.HitPosition.y) / M_PI;
+
+				materialColor = glm::vec3(u, v, 0.0f); 
+			}
+
+			ray.Origin = hitInfo.HitPosition;
+
+			glm::vec3 difuseDir = glm::normalize(hitInfo.HitNormal + Utils::InUnitSphere(seed));
+			glm::vec3 specularDir = reflect(ray.Direction, hitInfo.HitNormal);
+			
+			bool isRefractiveBounce = material.Transmission >= Utils::RandomFloat(seed);
+			bool isSpecularBounce = material.Metallness >= Utils::RandomFloat(seed);
+
+			ray.Direction = Utils::Lerp3(glm::normalize(Utils::Lerp3(difuseDir, specularDir, material.Smoothness * isSpecularBounce)),
+										glm::normalize(Utils::Lerp3(
+											Utils::Refract(ray.Direction + Utils::InUnitSphere(seed), hitInfo.HitNormal, material.IOR),
+											Utils::Refract(ray.Direction, hitInfo.HitNormal, material.IOR),
+											material.Smoothness)), isRefractiveBounce);
+			
+			glm::vec3 emittedLight = material.EmissionColor * material.EmissionPower;
+			incomingLight += emittedLight * rayColor;
+			//rayColor *= Utils::Lerp3(material.Color, material.SpecularColor, isSpecularBounce);
+			rayColor *= materialColor;
+
+			// Early exit if ray is too weak
+			float p = glm::max(rayColor.r, glm::max(rayColor.g, rayColor.b));
+			if (Utils::RandomFloat(seed) >= p) {
+				break;
+			}
+			rayColor *= 1.0f / p;
+		}
+		else 
+		{
+			incomingLight += m_ActiveScene->SkyColor * rayColor;
 			break;
 		}
-
-		if (m_Settings.DisplayNormals)
-			return glm::vec4(payload.WorldNormal, 1.0f); // DISPLAYING NORMALS
-
-		const Material& material = m_ActiveScene->Materials[m_ActiveScene->SceneObjects[payload.ObjectIndex]->MaterialIndex];
-
-		if(!m_Settings.OnlyIndirect && i != 0)
-			contribution *= material.Albedo;
-		light += material.GetEmission();
-
-		if (!material.isGlass)
-		{
-			ray.Origin = payload.WorldPosition + (payload.WorldNormal * glm::vec3(0.0001f));
-			if (m_Settings.SlowRandom)
-				ray.Direction = glm::normalize((payload.WorldNormal + (Walnut::Random::InUnitSphere() * material.Roughness)));
-			else
-				ray.Direction = glm::normalize(glm::reflect(ray.Direction, payload.WorldNormal) + (Utils::InUnitSphere(seed) * material.Roughness));
-		}
-		else
-		{
-			ray.Direction = Utils::refract(ray.Direction, payload.WorldNormal, material.IOR) + (Utils::InUnitSphere(seed) * material.Roughness);
-			ray.Origin = payload.WorldPosition + ray.Direction * 1.0001f;
-		}
-
 	}
 
-	return glm::vec4(light, 1.0f);
+	return glm::vec4(incomingLight, 1.0f); 
 }
 
-Renderer::HitPayload Renderer::Miss(const Ray& ray)
+Renderer::HitInfo Renderer::Miss(const Ray& ray)
 {
-	Renderer::HitPayload payload;
+	Renderer::HitInfo payload;
 	payload.HitDistance = -1.0f;
 	return payload;
 }
 
-Renderer::HitPayload Renderer::TraceRay(const Ray& ray)
+Renderer::HitInfo Renderer::TraceRay(const Ray& ray)
 {
-	Renderer::HitPayload payload;
+	Renderer::HitInfo payload;
 
 	int closestObj = -1;
 
@@ -226,29 +285,6 @@ Renderer::HitPayload Renderer::TraceRay(const Ray& ray)
 			exitDistance = t0;
 			closestObj = (int)i;
 		}
-
-
-		/*if (Sphere* sphere = dynamic_cast<Sphere*>(m_ActiveScene->SceneObjects[i]))
-		{
-			glm::vec3 origin = ray.Origin - sphere->Position;
-
-			float a = glm::dot(ray.Direction, ray.Direction);
-			float b = 2.0f * glm::dot(origin, ray.Direction);
-			float c = glm::dot(origin, origin) - sphere->Radius * sphere->Radius;
-
-			float discriminant = b * b - 4.0f * a * c;
-			if (discriminant < 0.0f)
-				continue;
-
-			float closestT = (-b - glm::sqrt(discriminant)) / (2.0 * a);
-			float t0 = (-b + glm::sqrt(discriminant)) / (2.0 * a);
-			if (closestT > 0.0f && closestT < hitDistance)
-			{
-				hitDistance = closestT;
-				exitDistance = t0;
-				closestObj = (int)i;
-			}
-		}*/
 	}
 
 	if (closestObj < 0) return Miss(ray);
@@ -256,24 +292,20 @@ Renderer::HitPayload Renderer::TraceRay(const Ray& ray)
 	return ClosestHit(ray, hitDistance, exitDistance, closestObj);
 }
 
-Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, float exitDistane, int objectIndex)
+Renderer::HitInfo Renderer::ClosestHit(const Ray& ray, float hitDistance, float exitDistane, int objectIndex)
 {
-	Renderer::HitPayload payload;
+	Renderer::HitInfo payload;
 	payload.HitDistance = hitDistance;
 	payload.ExitDistance = exitDistane;
 	payload.ObjectIndex = objectIndex;
 
 	RTObject* closestObj = m_ActiveScene->SceneObjects[objectIndex];
 
-	glm::vec3 origin = ray.Origin - closestObj->Position;
-	payload.WorldPosition = origin + ray.Direction * hitDistance;
-	payload.WorldNormal = glm::normalize(payload.WorldPosition);
+	glm::vec3 origin = ray.Origin - m_ActiveScene->SceneObjects[objectIndex]->GetPosition();
+	payload.HitPosition = origin + ray.Direction * hitDistance;
+	payload.HitNormal = m_ActiveScene->SceneObjects[objectIndex]->Normal(payload.HitPosition);
 
-	payload.WorldPosition += closestObj->GetPosition();
-
-	// \/ Remove
-
-	payload.WorldNormal = m_ActiveScene->SceneObjects[objectIndex]->Position;
+	payload.HitPosition += m_ActiveScene->SceneObjects[objectIndex]->GetPosition();
 
 	return payload;
 }

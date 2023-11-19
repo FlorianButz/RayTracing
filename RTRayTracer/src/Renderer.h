@@ -12,16 +12,17 @@
 
 class Renderer
 {
+
 public:
 	struct Settings 
 	{
 		bool DisplayNormals = false;
-		bool OnlyIndirect = false;
 		
 		bool Accumulate = true;
 		bool SlowRandom = false;
 
 		int LightBounces = 5;
+		int RaysPerPixel = 1;
 		float AntiAliasingAmount = 0.001f;
 	};
 public:
@@ -31,27 +32,30 @@ public:
 	void OnResize(uint32_t width, uint32_t height);
 	void Render(const Scene& scene, const Camera& camera);
 	int GetFrameIndex();
+
+	uint32_t GetPixelAt(int x, int y);
+	bool DoesImageExist();
 	
 	std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
 
 	void ResetFrameIndex() { m_FrameIndex = 1; }
 	Settings& GetSettings() { return m_Settings; }
 private:
-	struct HitPayload
+	struct HitInfo
 	{
 		float HitDistance;
 		float ExitDistance;
-		glm::vec3 WorldPosition;
-		glm::vec3 WorldNormal;
+		glm::vec3 HitPosition;
+		glm::vec3 HitNormal;
 
 		int ObjectIndex;
 	};
 
-	glm::vec4 PerPixel(uint32_t x, uint32_t y); // RayGen
+	glm::vec4 PerPixel(Ray ray, uint32_t seed, uint32_t x, uint32_t y); // RayGen
 	
-	HitPayload TraceRay(const Ray& ray);
-	HitPayload Miss(const Ray& ray);
-	Renderer::HitPayload ClosestHit(const Ray& ray, float hitDistance, float exitDistance, int objectIndex);
+	HitInfo TraceRay(const Ray& ray);
+	HitInfo Miss(const Ray& ray);
+	Renderer::HitInfo ClosestHit(const Ray& ray, float hitDistance, float exitDistance, int objectIndex);
 
 private:
 	std::shared_ptr<Walnut::Image> m_FinalImage;
@@ -62,6 +66,8 @@ private:
 
 	const Scene* m_ActiveScene = nullptr;
 	const Camera* m_ActiveCamera = nullptr;
+
+	bool m_HasImageData = false;
 
 	uint32_t* m_ImageData = nullptr;
 	glm::vec4* m_AccumulationData = nullptr;
