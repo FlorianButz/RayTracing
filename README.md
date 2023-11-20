@@ -1,3 +1,9 @@
 # C++ Pathtracer using Walnut
 
-A simple C++ Pathtracer that can run realtime on many devices.
+A simple C++ CPU-Based PathTracer that can run realtime.
+
+Supports:
+- Global Illumination
+- Refraction
+- Reflection
+- Emissive Materials
