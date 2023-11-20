@@ -194,6 +194,8 @@ glm::vec4 Renderer::PerPixel(Ray ray, uint32_t seed, uint32_t x, uint32_t y)
 	glm::vec3 incomingLight = glm::vec3(0.0f);
 	glm::vec3 rayColor = glm::vec3(1.0f);
 	
+	// PerPixel function inspired from Sebastian Lague's Raytracing implementation: https://github.com/SebLague/Ray-Tracing
+
 	for (int i = 0; i <= m_Settings.LightBounces; i++)
 	{
 		Renderer::HitInfo hitInfo = TraceRay(ray);
