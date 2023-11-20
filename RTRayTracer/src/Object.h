@@ -28,6 +28,7 @@ public:
 	glm::vec3 Position = glm::vec3(0.0f);
 	int MaterialIndex = 0;
 	virtual ~RTObject() { }
+
 };
 
 class Sphere : public RTObject

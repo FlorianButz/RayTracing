@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <string>
 
+
 using namespace Walnut;
 
 struct Color {
@@ -63,7 +64,7 @@ public:
 			floor->MaterialIndex = 0;
 			m_Scene.SceneObjects.push_back(floor);
 
-			m_Scene.SkyColor = glm::vec3(0.175f, 0.175f, 0.175f);
+			m_Scene.SkyColor = glm::vec3(0.55f, 0.55f, 0.55f);
 	}
 
 	virtual void OnUpdate(float ts) override
@@ -94,11 +95,11 @@ public:
 		for (std::int32_t I = 0; I < m_Renderer.GetFinalImage()->GetHeight(); ++I) {
 			for (std::int32_t J = 0; J < m_Renderer.GetFinalImage()->GetWidth(); ++J) {
 				std::size_t NewPos = (I * m_Renderer.GetFinalImage()->GetWidth() + J) * 4;
-				Color pixelColor = ConvertFromRGBA(m_Renderer.GetPixelAt(J, I));
+				Color pixelColor = ConvertFromRGBA(m_Renderer.GetPixelAt(J, I));			
 				PngBuffer[NewPos + 0] = pixelColor.r; // B is offset 0
 				PngBuffer[NewPos + 1] = pixelColor.g; // G is offset 1
 				PngBuffer[NewPos + 2] = pixelColor.b; // R is offset 2
-				PngBuffer[NewPos + 3] = pixelColor.a; // A is offset 3
+				PngBuffer[NewPos + 3] = pixelColor.a; // A is offset 3sas
 			}
 		}
 
@@ -118,6 +119,211 @@ public:
 		lodepng::save_file(ImageBuffer, fileName);
 	}
 
+	void ResetScene()
+	{
+		m_Scene = Scene();
+
+		m_Renderer.ResetFrameIndex();
+
+		Material& defaultMaterial = m_Scene.Materials.emplace_back();
+		defaultMaterial.Color = { 0.5f, 0.5f, 0.5f };
+		defaultMaterial.Smoothness = 0.05f;
+	}
+
+	void TwoSpheres()
+	{
+		ResetScene();
+
+		Material& defaultMaterial2 = m_Scene.Materials.emplace_back();
+		defaultMaterial2.Color = { 0.7f, 0.7f, 0.7f };
+		defaultMaterial2.Smoothness = 0.95f;
+
+		Material& defaultMaterial3 = m_Scene.Materials.emplace_back();
+		defaultMaterial3.Color = { 0.7f, 0.7f, 0.7f };
+		defaultMaterial3.Smoothness = 0.0f;
+		defaultMaterial3.EmissionColor = glm::vec3(1.0f);
+		defaultMaterial3.EmissionPower = 2.0f;
+
+		Sphere* sphere = new Sphere();
+		sphere->Position = { -1.5f, 0.0f, 0.0f };
+		sphere->Radius = 1.0f;
+		sphere->MaterialIndex = 1;
+		m_Scene.SceneObjects.push_back(sphere);
+
+		Sphere* sphere2 = new Sphere();
+		sphere2->Position = { 1.5f, 0.0f, 0.0f };
+		sphere2->Radius = 1.0f;
+		sphere2->MaterialIndex = 2;
+		m_Scene.SceneObjects.push_back(sphere2);
+
+		Cube* floor = new Cube();
+		floor->Position = { 0.0f, -1.0f, 0.0f };
+		floor->Dimensions = glm::vec3(1000.0f, 0.01f, 1000.0f);
+		floor->MaterialIndex = 0;
+		m_Scene.SceneObjects.push_back(floor);
+
+		m_Scene.SkyColor = glm::vec3(0.75f, 0.75f, 0.75f);
+	}
+
+	void RefractionTest()
+	{
+		ResetScene();
+
+		Material& glassSphere1 = m_Scene.Materials.emplace_back();
+		glassSphere1.Color = { 0.8f, 0.2f, 0.3f };
+		glassSphere1.Smoothness = 0.985f;
+		glassSphere1.Transmission = 0.95f;
+		glassSphere1.IOR = 1.5f;
+
+		Material& glassSphere2 = m_Scene.Materials.emplace_back();
+		glassSphere2.Color = { 0.3f, 0.8f, 0.2f };
+		glassSphere2.Smoothness = 0.985f;
+		glassSphere2.Transmission = 0.95f;
+		glassSphere2.IOR = 1.5f;
+
+		Material& glassSphere3 = m_Scene.Materials.emplace_back();
+		glassSphere3.Color = { 0.2f, 0.3f, 0.8f };
+		glassSphere3.Smoothness = 0.985f;
+		glassSphere3.Transmission = 0.95f;
+		glassSphere3.IOR = 1.5f;
+
+		Material& emissiveSphere = m_Scene.Materials.emplace_back();
+		emissiveSphere.EmissionColor = { 0.8f, 0.7f, 0.9f };
+		emissiveSphere.EmissionPower = 25.0f;
+
+		Sphere* sphere = new Sphere();
+		sphere->Position = { 0.0f, -102.0f, 0.0f };
+		sphere->Radius = 100.0f;
+		sphere->MaterialIndex = 0;
+		m_Scene.SceneObjects.push_back(sphere);
+
+		Sphere* sphere2 = new Sphere();
+		sphere2->Position = { 0.0f, 2.5f, -10.0f };
+		sphere2->Radius = 2.5f;
+		sphere2->MaterialIndex = 4;
+		m_Scene.SceneObjects.push_back(sphere2);
+
+		Sphere* sphere3 = new Sphere();
+		sphere3->Position = { 2.5f, -1.0f, 0.0f };
+		sphere3->Radius = 1.0f;
+		sphere3->MaterialIndex = 1;
+		m_Scene.SceneObjects.push_back(sphere3);
+
+		Sphere* sphere4 = new Sphere();
+		sphere4->Position = { 0.0f, -1.0f, 0.0f };
+		sphere4->Radius = 1.0f;
+		sphere4->MaterialIndex = 2;
+		m_Scene.SceneObjects.push_back(sphere4);
+
+		Sphere* sphere5 = new Sphere();
+		sphere5->Position = { -2.5f, -1.0f, 0.0f };
+		sphere5->Radius = 1.0f;
+		sphere5->MaterialIndex = 3;
+		m_Scene.SceneObjects.push_back(sphere5);
+
+		m_Scene.SkyColor = glm::vec3(0.05f, 0.05f, 0.05f);
+	}
+
+	void ColorRoom()
+	{
+		ResetScene();
+
+		Material& defaultMaterial2 = m_Scene.Materials.emplace_back();
+		defaultMaterial2.Color = { 0.9f, 0.9f, 0.9f };
+		defaultMaterial2.Smoothness = 0.125f;
+
+		Material& defaultMaterial3 = m_Scene.Materials.emplace_back();
+		defaultMaterial3.Color = { 0.8f, 0.8f, 0.8f };
+		defaultMaterial3.Smoothness = 0.0f;
+		defaultMaterial3.EmissionColor = glm::vec3(1.0f);
+		defaultMaterial3.EmissionPower = 5.0f;
+
+		Material& redMaterial = m_Scene.Materials.emplace_back();
+		redMaterial.Color = { 0.8f, 0.1f, 0.1f };
+		redMaterial.Smoothness = 0.0f;
+
+		Material& greenMaterial = m_Scene.Materials.emplace_back();
+		greenMaterial.Color = { 0.1f, 0.8f, 0.1f };
+		greenMaterial.Smoothness = 0.0f;
+
+		Material& reflectiveMaterial = m_Scene.Materials.emplace_back();
+		reflectiveMaterial.Color = { 0.85f, 0.85f, 0.85f };
+		reflectiveMaterial.Smoothness = 0.975f;
+		reflectiveMaterial.Metallness = 0.95f;
+
+		Material& transmissiveMaterial = m_Scene.Materials.emplace_back();
+		transmissiveMaterial.Color = { 0.85f, 0.85f, 0.85f };
+		transmissiveMaterial.Smoothness = 0.875f;
+		transmissiveMaterial.Metallness = 0.95f;
+		transmissiveMaterial.Transmission = 0.85f;
+		transmissiveMaterial.IOR = 1.45f;
+
+		Material& colorMaterial = m_Scene.Materials.emplace_back();
+		colorMaterial.Color = { 0.1f, 0.225f, 0.65f };
+		colorMaterial.Smoothness = 0.225f;
+
+		Sphere* glassSphere = new Sphere();
+		glassSphere->Position = { -1.25f, -1.5f, -0.25f };
+		glassSphere->Radius = 1.0f;
+		glassSphere->MaterialIndex = 6;
+		m_Scene.SceneObjects.push_back(glassSphere);
+
+		Sphere* reflectiveSphere = new Sphere();
+		reflectiveSphere->Position = { 1.25f, -1.5f, 0.25f };
+		reflectiveSphere->Radius = 1.0f;
+		reflectiveSphere->MaterialIndex = 5;
+		m_Scene.SceneObjects.push_back(reflectiveSphere);
+
+		Sphere* colorSphere = new Sphere();
+		colorSphere->Position = { -0.25f, -2.0f, 0.45f };
+		colorSphere->Radius = 0.5f;
+		colorSphere->MaterialIndex = 7;
+		m_Scene.SceneObjects.push_back(colorSphere);
+
+		Cube* floor = new Cube();
+		floor->Position = { 0.0f, -2.5f, 5.0f };
+		floor->Dimensions = glm::vec3(2.5f, 0.001f, 10.0f);
+		floor->MaterialIndex = 1;
+		m_Scene.SceneObjects.push_back(floor);
+
+		Cube* ceiling = new Cube();
+		ceiling->Position = { 0.0f, 2.5f, 5.0f };
+		ceiling->Dimensions = glm::vec3(2.5f, 0.001f, 10.0f);
+		ceiling->MaterialIndex = 1;
+		m_Scene.SceneObjects.push_back(ceiling);
+
+		Cube* wallLeft = new Cube();
+		wallLeft->Position = { -2.5f, 0.0f, 5.0f };
+		wallLeft->Dimensions = glm::vec3(0.001f, 2.5f, 10.0f);
+		wallLeft->MaterialIndex = 3;
+		m_Scene.SceneObjects.push_back(wallLeft);
+
+		Cube* wallRight = new Cube();
+		wallRight->Position = { 2.5f, 0.0f, 5.0f };
+		wallRight->Dimensions = glm::vec3(0.001f, 2.5f, 10.0f);
+		wallRight->MaterialIndex = 4;
+		m_Scene.SceneObjects.push_back(wallRight);
+
+		Cube* wallBack = new Cube();
+		wallBack->Position = { 0.0f, 0.0f, -2.5f };
+		wallBack->Dimensions = glm::vec3(2.5f, 2.5f, 0.001f);
+		wallBack->MaterialIndex = 1;
+		m_Scene.SceneObjects.push_back(wallBack);
+
+		Cube* wallFront = new Cube();
+		wallFront->Position = { 0.0f, 0.0f, 10.0f };
+		wallFront->Dimensions = glm::vec3(2.5f, 2.5f, 0.001f);
+		wallFront->MaterialIndex = 1;
+		m_Scene.SceneObjects.push_back(wallFront);
+
+		Cube* ceilingLight = new Cube();
+		ceilingLight->Position = { 0.0f, 2.4f, 0.0f };
+		ceilingLight->Dimensions = glm::vec3(1.0f, 0.05f, 1.0f);
+		ceilingLight->MaterialIndex = 2;
+		m_Scene.SceneObjects.push_back(ceilingLight);
+
+		m_Scene.SkyColor = glm::vec3(0.0f, 0.0f, 0.0f);
+	}
 
 	virtual void OnUIRender() override
 	{
@@ -136,21 +342,25 @@ public:
 			}
 
 			ImGui::Spacing();
-			ImGui::Separator();
-			ImGui::Spacing();
 
-			ImGui::Text("Export Scene: ");
-			ImGui::Spacing();
-
-			ImGui::InputText("Scene File Name", m_SceneFileName, IM_ARRAYSIZE(m_SceneFileName));
-
-			if (ImGui::Button("Save Scene"))
+			if (ImGui::Button("Two Spheres"))
 			{
-				throw "Not Implemented";
+				TwoSpheres();
 			}
-			if (ImGui::Button("Load Scene"))
+
+			if (ImGui::Button("Color Room"))
 			{
-				throw "Not Implemented";
+				ColorRoom();
+			}
+
+			if (ImGui::Button("Refraction Test"))
+			{
+				RefractionTest();
+			}
+
+			if (ImGui::Button("Reset Scene"))
+			{
+				ResetScene();
 			}
 		}
 		ImGui::End();
@@ -251,9 +461,6 @@ public:
 					ImGui::SliderFloat("Index Of Refraction", &material.IOR, 0.0f, 10.0f);
 
 					ImGui::Separator();
-					
-					ImGui::Checkbox("Checker Texture", &material.Checker);
-					ImGui::DragFloat("Checker Scale", &material.CheckerScale, 0.01f, 0.0f, FLT_MAX);
 
 					ImGui::Separator();
 
@@ -360,7 +567,7 @@ public:
 				m_Renderer.ResetFrameIndex();
 		}*/
 
-		if (Input::IsKeyDown(KeyCode::LeftShift) && m_IsRealTime)
+		if (Input::IsKeyDown(KeyCode::LeftControl) && m_IsRealTime)
 			m_Renderer.ResetFrameIndex();
 
 		if (m_IsRealTime) {
@@ -387,7 +594,6 @@ public:
 	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
 	char m_ImageFileName[256] = "Render";
-	char m_SceneFileName[256] = "Render";
 
 	float m_ResolutionScale = 1.0f;
 
@@ -415,4 +621,33 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 		}
 	});
 	return app;
+}
+
+
+namespace glm
+{
+
+	template<class Archive> void serialize(Archive& archive, glm::vec2& v) { archive(v.x, v.y); }
+	template<class Archive> void serialize(Archive& archive, glm::vec3& v) { archive(v.x, v.y, v.z); }
+	template<class Archive> void serialize(Archive& archive, glm::vec4& v) { archive(v.x, v.y, v.z, v.w); }
+	template<class Archive> void serialize(Archive& archive, glm::ivec2& v) { archive(v.x, v.y); }
+	template<class Archive> void serialize(Archive& archive, glm::ivec3& v) { archive(v.x, v.y, v.z); }
+	template<class Archive> void serialize(Archive& archive, glm::ivec4& v) { archive(v.x, v.y, v.z, v.w); }
+	template<class Archive> void serialize(Archive& archive, glm::uvec2& v) { archive(v.x, v.y); }
+	template<class Archive> void serialize(Archive& archive, glm::uvec3& v) { archive(v.x, v.y, v.z); }
+	template<class Archive> void serialize(Archive& archive, glm::uvec4& v) { archive(v.x, v.y, v.z, v.w); }
+	template<class Archive> void serialize(Archive& archive, glm::dvec2& v) { archive(v.x, v.y); }
+	template<class Archive> void serialize(Archive& archive, glm::dvec3& v) { archive(v.x, v.y, v.z); }
+	template<class Archive> void serialize(Archive& archive, glm::dvec4& v) { archive(v.x, v.y, v.z, v.w); }
+
+	// glm matrices serialization
+	template<class Archive> void serialize(Archive& archive, glm::mat2& m) { archive(m[0], m[1]); }
+	template<class Archive> void serialize(Archive& archive, glm::dmat2& m) { archive(m[0], m[1]); }
+	template<class Archive> void serialize(Archive& archive, glm::mat3& m) { archive(m[0], m[1], m[2]); }
+	template<class Archive> void serialize(Archive& archive, glm::mat4& m) { archive(m[0], m[1], m[2], m[3]); }
+	template<class Archive> void serialize(Archive& archive, glm::dmat4& m) { archive(m[0], m[1], m[2], m[3]); }
+
+	template<class Archive> void serialize(Archive& archive, glm::quat& q) { archive(q.x, q.y, q.z, q.w); }
+	template<class Archive> void serialize(Archive& archive, glm::dquat& q) { archive(q.x, q.y, q.z, q.w); }
+
 }

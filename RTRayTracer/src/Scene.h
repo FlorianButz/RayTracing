@@ -19,15 +19,12 @@ struct Material
 
 	float Transmission = 0.0f;
 	float IOR = 1.0f;
-
-	bool Checker = false;
-	float CheckerScale = 1.0f;
 };
 
 struct Scene
 {
 	std::vector<RTObject*> SceneObjects = std::vector<RTObject*>();
 	std::vector<Material> Materials = std::vector<Material>();
-
+	
 	glm::vec3 SkyColor = glm::vec3(0.0f);
 };

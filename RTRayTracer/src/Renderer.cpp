@@ -207,13 +207,6 @@ glm::vec4 Renderer::PerPixel(Ray ray, uint32_t seed, uint32_t x, uint32_t y)
 
 			glm::vec3 materialColor = material.Color;
 
-			if (material.Checker) {
-				float u = 0.5 + glm::atan(hitInfo.HitPosition.z, hitInfo.HitPosition.x) / (2 * M_PI);
-				float v = 0.5 - glm::asin(hitInfo.HitPosition.y) / M_PI;
-
-				materialColor = glm::vec3(u, v, 0.0f); 
-			}
-
 			ray.Origin = hitInfo.HitPosition;
 
 			glm::vec3 difuseDir = glm::normalize(hitInfo.HitNormal + Utils::InUnitSphere(seed));
